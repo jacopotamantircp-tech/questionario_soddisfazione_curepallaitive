@@ -1,0 +1,9 @@
+[project]
+name = "questionario-palliative"
+version = "0.1.0"
+dependencies = [
+    "streamlit",
+    "pandas",
+    "plotly",
+    "numpy"
+]
