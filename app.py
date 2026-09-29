@@ -49,7 +49,6 @@ if st.session_state.step == 0:
 def render_likert_question(question_text, key_name):
     st.markdown(f"**{question_text}**")
     
-    # Inizializza lo stato se non esiste (None significa nessuna scelta fatta)
     if key_name not in st.session_state:
         st.session_state[key_name] = None
         
@@ -67,8 +66,6 @@ def render_likert_question(question_text, key_name):
     for i in range(5):
         val = i + 1
         with cols[i]:
-            # Mostra un bottone o un selettore chiaro. Usiamo un checkbox/radio personalizzato tramite colonne o selectbox pulita.
-            # Un approccio robusto ed elegante in Streamlit per avere i bottoni in riga:
             is_selected = (selected_val == val)
             btn_label = f"🔵 **{val}**" if is_selected else f"⚪ {val}"
             if st.button(btn_label, key=f"btn_{key_name}_{val}", use_container_width=True):
@@ -80,7 +77,7 @@ def render_likert_question(question_text, key_name):
     return st.session_state[key_name]
 
 # SCHERMATA 1: Area 1
-elif st.session_state.step == 1:
+if st.session_state.step == 1:
     st.markdown(f"## {titolo_principale}")
     st.markdown(f"*{sottotitolo}*", unsafe_allow_html=True)
     st.progress(0.2, text="Area 1 di 5: Soddisfazione Lavorativa")
@@ -124,7 +121,7 @@ elif st.session_state.step == 2:
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("⬅️ Indietro"):
+        if st.button("⬅️️ Indietro"):
             st.session_state.step = 1
             st.rerun()
     with col2:
@@ -259,7 +256,6 @@ elif st.session_state.step == 6:
 
     st.markdown("<br>", unsafe_allow_html=True)
     if st.button("Compila un nuovo questionario"):
-        # Reset dello stato
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.session_state.step = 0
