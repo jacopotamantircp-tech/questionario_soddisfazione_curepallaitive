@@ -10,30 +10,38 @@ st.set_page_config(
     layout="centered"
 )
 
-# CSS personalizzato per bloccare i radio button perfettamente in orizzontale su un'unica riga
+# CSS avanzato per blindare i radio button in orizzontale su un'unica riga e compattare le etichette
 st.markdown("""
 <style>
-    /* Forza i radio button a disporsi in orizzontale ed evita che vadano a capo */
-    div.row-widget.stRadio > div {
+    /* Forza il contenitore dei radio button a disposizione orizzontale */
+    div.stRadio > div[role='radiogroup'] {
+        display: flex;
         flex-direction: row;
         justify-content: space-between;
         align-items: stretch;
+        width: 100%;
     }
-    div.row-widget.stRadio > div label {
+    /* Ogni opzione radio occupa una quota uguale e ha margini ridotti */
+    div.stRadio > div[role='radiogroup'] > label {
         background-color: #F8F9FA;
         border: 1px solid #E0E0E0;
         border-radius: 6px;
-        padding: 8px 12px;
+        padding: 6px 4px;
         text-align: center;
-        flex: 1;
-        margin: 0 4px;
-        font-size: 13px;
+        flex: 1 1 0px;
+        margin: 0 3px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
     }
-    div.row-widget.stRadio > div label p {
-        font-size: 11px !important;
+    /* Riduce la dimensione del testo della descrizione sotto al numero */
+    div.stRadio > div[role='radiogroup'] > label p {
+        font-size: 10px !important;
         color: #555555;
-        margin-top: 4px;
-        line-height: 1.2;
+        margin-top: 2px;
+        line-height: 1.1;
+        text-align: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -42,7 +50,7 @@ st.markdown("""
 if 'step' not in st.session_state:
     st.session_state.step = 0
 
-# Opzioni della scala Likert con descrizioni
+# Opzioni della scala Likert con descrizioni brevi per mantenere la riga perfetta
 likert_labels = {
     1: "1<br>Fortemente in disaccordo",
     2: "2<br>In disaccordo",
@@ -53,7 +61,7 @@ likert_labels = {
 
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
-    st.title("🏥 Unità Operativa Complessa Rete delle Cure Palliative")
+    st.title("UNITÀ OPERATIVA COMPLESA RETE DELLE CURE PALLIATIVE")
     st.subheader("UA Cure Palliative Adulto – Monitoraggio del Clima Organizzativo e del Benessere")
     
     st.markdown("""
@@ -99,7 +107,7 @@ elif st.session_state.step == 1:
     st.markdown("<br>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("⬅️ Indietro"):
+        if st.button("⬅️️ Indietro"):
             st.session_state.step = 0
             st.rerun()
     with col2:
