@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import os
+import openpyxl
 
 # Configurazione della pagina
 st.set_page_config(
@@ -57,6 +59,78 @@ def render_likert_question(question_text, key_name):
             
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
+
+# Funzione per registrare i dati direttamente nel file Excel ufficiale di analisi
+def registra_risposta_su_excel():
+    excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
+    
+    # Calcolo delle medie per area rispettando la struttura del file Excel
+    m_area1 = np.mean([st.session_state.q1_1, st.session_state.q1_2])
+    m_area2 = np.mean([st.session_state.q2_1, st.session_state.q2_2, st.session_state.q2_3, st.session_state.q2_4, st.session_state.q2_5])
+    # Area 3 Distress (invertita: 6 - valore)
+    m_area3 = np.mean([6 - st.session_state.q3_1, 6 - st.session_state.q3_2, 6 - st.session_state.q3_3])
+    m_area4 = np.mean([st.session_state.q4_1, st.session_state.q4_2])
+    m_area5 = np.mean([st.session_state.q5_1, st.session_state.q5_2])
+    
+    indice_globale = np.mean([m_area1, m_area2, m_area3, m_area4, m_area5])
+    
+    # Leggiamo il file Excel esistente per determinare il progressivo dell'ID Risposta
+    if os.path.exists(excel_file):
+        df_esistente = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
+        num_id = len(df_esistente) + 1
+    else:
+        num_id = 1
+        
+    id_risposta_str = f"ID_{num_id:03d}"
+    data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    nuova_riga = {
+        "Data_Ora": data_compilazione,
+        "ID Risposta": id_risposta_str,
+        "Profilo Professionale": "Anonimo", # Senza dati anagrafici per tutelare la privacy
+        "A1_Q1 (Significato Lavoro)": st.session_state.q1_1,
+        "A1_Q2 (Riconoscimento)": st.session_state.q1_2,
+        "A2_Q3 (Supporto Équipe)": st.session_state.q2_1,
+        "A2_Q4 (Carichi Sostenibili)": st.session_state.q2_2,
+        "A2_Q5 (Debriefing)": st.session_state.q2_3,
+        "A2_Q6 (Parità di Genere)": st.session_state.q2_4,
+        "A2_Q7 (Inclusione/Orientamento)": st.session_state.q2_5,
+        "A3_Q8 (Esaurimento Emotivo)*": st.session_state.q3_1,
+        "A3_Q9 (Peso Emotivo)*": st.session_state.q3_2,
+        "A3_Q10 (Strategie Coping)": st.session_state.q3_3,
+        "A4_Q11 (Supporto Etico)": st.session_state.q4_1,
+        "A4_Q12 (Linee Guida)": st.session_state.q4_2,
+        "A5_Q13 (Formazione)": st.session_state.q5_1,
+        "A5_Q14 (Prospettive Future)": st.session_state.q5_2,
+        "Media Area 1": round(m_area1, 2),
+        "Media Area 2": round(m_area2, 2),
+        "Media Area 3 (Invertita)": round(m_area3, 2),
+        "Media Area 4": round(m_area4, 2),
+        "Media Area 5": round(m_area5, 2),
+        "Indice Benessere Globale": round(indice_globale, 2)
+    }
+    
+    df_nuovo = pd.DataFrame([nuova_riga])
+    
+    if os.path.exists(excel_file):
+        # Utilizziamo pandas ExcelWriter per aggiornare il foglio 'Raccolta Dati' mantenendo 'Analisi e Sintesi'
+        with pd.ExcelWriter(excel_file, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+            # Leggiamo tutto il foglio esistente per appendere la riga in fondo
+            df_full = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
+            df_updated = pd.concat([df_full, df_nuovo], ignore_index=True)
+            df_updated.to_excel(writer, sheet_name='Raccolta Dati', index=False)
+    else:
+        # Se per qualche motivo il file non è presente, lo creiamo da zero con i due fogli
+        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+            df_nuovo.to_excel(writer, sheet_name='Raccolta Dati', index=False)
+            df_sintesi = pd.DataFrame({
+                "DASHBOARD DI MONITORAGGIO - SINTESI RISULTATI": ["Unità Operativa Complessa Rete delle Cure Palliative"],
+                "Numero Item": [14],
+                "Media Totale": [round(indice_globale, 2)],
+                "Mediani / Note": ["Aggiornato in tempo reale"],
+                "Stato / Soglia": ["Ottimale"]
+            })
+            df_sintesi.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
 
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
@@ -223,6 +297,8 @@ elif st.session_state.step == 5:
             if None in vals_5:
                 st.warning("Per favore, rispondi a tutte le domande prima di procedere.")
             else:
+                # Salvataggio automatico sul file Excel ufficiale
+                registra_risposta_su_excel()
                 st.session_state.step = 6
                 st.rerun()
 
