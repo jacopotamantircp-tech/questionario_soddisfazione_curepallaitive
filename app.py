@@ -27,32 +27,6 @@ def render_header():
     </div>
     """, unsafe_allow_html=True)
 
-# SCHERMATA 0: Presentazione e istruzioni
-if st.session_state.step == 0:
-    render_header()
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="background-color: #F9F9F9; padding: 20px; border-radius: 5px; border: 1px solid #E0E0E0;">
-    <p><b>Gentile Collega,</b></p>
-    <p>Il presente questionario si inserisce all'interno di un programma di monitoraggio e miglioramento del clima organizzativo e della qualità della vita lavorativa della nostra Rete di Cure Palliative. La compilazione è <b>strettamente anonima</b> e i dati saranno trattati unicamente in forma aggregata. Le vostre risposte sono uno strumento fondamentale per valorizzare il benessere del personale e orientare azioni di supporto mirate.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("### Legenda della Scala Likert a 5 punti:")
-    st.markdown("""
-    * **1** = Fortemente in disaccordo
-    * **2** = In disaccordo
-    * **3** = Neutro / Indeciso
-    * **4** = In accordo
-    * **5** = Fortemente in accordo
-    """)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("Inizia il Questionario ➔", type="primary", use_container_width=True):
-        st.session_state.step = 1
-        st.rerun()
-
 # Funzione d'appoggio per creare una scala Likert orizzontale pulita con colonne
 def render_likert_question(question_text, key_name):
     st.markdown(f"**{question_text}**")
@@ -83,6 +57,32 @@ def render_likert_question(question_text, key_name):
             
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
+
+# SCHERMATA 0: Presentazione e istruzioni
+if st.session_state.step == 0:
+    render_header()
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background-color: #F9F9F9; padding: 20px; border-radius: 5px; border: 1px solid #E0E0E0;">
+    <p><b>Gentile Collega,</b></p>
+    <p>Il presente questionario si inserisce all'interno di un programma di monitoraggio e miglioramento del clima organizzativo e della qualità della vita lavorativa della nostra Rete di Cure Palliative. La compilazione è <b>strettamente anonima</b> e i dati saranno trattati unicamente in forma aggregata. Le vostre risposte sono uno strumento fondamentale per valorizzare il benessere del personale e orientare azioni di supporto mirate.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("### Legenda della Scala Likert a 5 punti:")
+    st.markdown("""
+    * **1** = Fortemente in disaccordo
+    * **2** = In disaccordo
+    * **3** = Neutro / Indeciso
+    * **4** = In accordo
+    * **5** = Fortemente in accordo
+    """)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Inizia il Questionario ➔", type="primary", use_container_width=True):
+        st.session_state.step = 1
+        st.rerun()
 
 # SCHERMATA 1: Area 1
 elif st.session_state.step == 1:
