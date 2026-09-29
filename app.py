@@ -14,14 +14,22 @@ st.set_page_config(
 if 'step' not in st.session_state:
     st.session_state.step = 0
 
-# Titolo esatto richiesto
+# Testi esatti richiesti
 titolo_principale = "QUESTIONARIO DI MONITORAGGIO DEL BENESSERE E CLIMA ORGANIZZATIVO IN CURE PALLIATIVE"
 sottotitolo = "Unità Operativa Complessa Rete delle Cure Palliative – UA Cure Palliative Adulto<br>Valutazione della Soddisfazione e del Distress del Personale Sanitario"
 
+# Funzione per mostrare l'intestazione centrata e ridotta del 20%
+def render_header():
+    st.markdown(f"""
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h2 style="font-size: 22px; color: #1F4E78; font-weight: bold; margin-bottom: 8px;">{titolo_principale}</h2>
+        <p style="font-size: 13px; color: #555555; line-height: 1.4;">{sottotitolo}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
-    st.title(titolo_principale)
-    st.markdown(f"### {sottotitolo}", unsafe_allow_html=True)
+    render_header()
     st.markdown("<br>", unsafe_allow_html=True)
     
     st.markdown("""
@@ -77,9 +85,8 @@ def render_likert_question(question_text, key_name):
     return st.session_state[key_name]
 
 # SCHERMATA 1: Area 1
-if st.session_state.step == 1:
-    st.markdown(f"## {titolo_principale}")
-    st.markdown(f"*{sottotitolo}*", unsafe_allow_html=True)
+elif st.session_state.step == 1:
+    render_header()
     st.progress(0.2, text="Area 1 di 5: Soddisfazione Lavorativa")
     st.header("🩺 AREA 1: Soddisfazione Lavorativa e Realizzazione Professionale")
     
@@ -101,8 +108,7 @@ if st.session_state.step == 1:
 
 # SCHERMATA 2: Area 2
 elif st.session_state.step == 2:
-    st.markdown(f"## {titolo_principale}")
-    st.markdown(f"*{sottotitolo}*", unsafe_allow_html=True)
+    render_header()
     st.progress(0.4, text="Area 2 di 5: Clima Organizzativo")
     st.header("🩺 AREA 2: Clima Organizzativo e Dinamiche d'Équipe")
 
@@ -121,7 +127,7 @@ elif st.session_state.step == 2:
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("⬅️️ Indietro"):
+        if st.button("⬅️ Indietro"):
             st.session_state.step = 1
             st.rerun()
     with col2:
@@ -134,8 +140,7 @@ elif st.session_state.step == 2:
 
 # SCHERMATA 3: Area 3
 elif st.session_state.step == 3:
-    st.markdown(f"## {titolo_principale}")
-    st.markdown(f"*{sottotitolo}*", unsafe_allow_html=True)
+    render_header()
     st.progress(0.6, text="Area 3 di 5: Distress Personale")
     st.header("🩺 AREA 3: Distress Personale e Carico Emotivo")
 
@@ -165,8 +170,7 @@ elif st.session_state.step == 3:
 
 # SCHERMATA 4: Area 4
 elif st.session_state.step == 4:
-    st.markdown(f"## {titolo_principale}")
-    st.markdown(f"*{sottotitolo}*", unsafe_allow_html=True)
+    render_header()
     st.progress(0.8, text="Area 4 di 5: Autonomia e Supporto Etico")
     st.header("🩺 AREA 4: Autonomia, Decision Making e Supporto Etico")
 
@@ -195,8 +199,7 @@ elif st.session_state.step == 4:
 
 # SCHERMATA 5: Area 5 e Invio
 elif st.session_state.step == 5:
-    st.markdown(f"## {titolo_principale}")
-    st.markdown(f"*{sottotitolo}*", unsafe_allow_html=True)
+    render_header()
     st.progress(1.0, text="Area 5 di 5: Sviluppo Professionale")
     st.header("🩺 AREA 5: Sviluppo Professionale e Prospettive Future")
 
@@ -223,13 +226,14 @@ elif st.session_state.step == 5:
                 st.session_state.step = 6
                 st.rerun()
 
-# SCHERMATA 6: Conferma e Cruscotto di Analisi / Grafico a Radar
+# SCHERMATA 6: Conferma e Cruscotto Personale
 elif st.session_state.step == 6:
+    render_header()
     st.success("✅ Grazie per la collaborazione! Il questionario è stato registrato con successo in forma anonima.")
     
     st.markdown("---")
-    st.markdown("### 📈 Cruscotto di Sintesi (Analisi di Reparto)")
-    st.markdown("*Ecco la visualizzazione sintetica dei punteggi medi per area calcolati in base alle risposte inserite:*")
+    st.markdown("### CRUSCOTTO DI SINTESI (le mie risposte)")
+    st.markdown("*Ecco la visualizzazione sintetica dei punteggi medi per area calcolate in base alle tue risposte:*")
 
     score_area1 = np.mean([st.session_state.q1_1, st.session_state.q1_2])
     score_area2 = np.mean([st.session_state.q2_1, st.session_state.q2_2, st.session_state.q2_3, st.session_state.q2_4, st.session_state.q2_5])
