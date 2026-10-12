@@ -62,7 +62,7 @@ def render_likert_question(question_text, key_name):
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
 
-# Funzione corretta per registrare la risposta preservando la Dashboard di Analisi e Sintesi
+# Funzione chirurgica: aggiorna ESCLUSIVAMENTE il foglio "Raccolta Dati" lasciando intatta la dashboard grafica
 def registra_risposta_su_excel():
     excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
     
@@ -77,10 +77,8 @@ def registra_risposta_su_excel():
     data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if os.path.exists(excel_file):
-        # Leggiamo il file esistente preservando ENTRAMBI i fogli
+        # Leggiamo solo il foglio dei dati grezzi
         df_raccolta = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
-        df_sintesi = pd.read_excel(excel_file, sheet_name='Analisi e Sintesi')
-        
         num_id = len(df_raccolta) + 1
         id_risposta_str = f"ID_{num_id:03d}"
         
@@ -113,10 +111,19 @@ def registra_risposta_su_excel():
         df_nuovo = pd.DataFrame([nuova_riga])
         df_raccolta_aggiornato = pd.concat([df_raccolta, df_nuovo], ignore_index=True)
         
-        # Riscriviamo il file Excel mantenendo rigorosamente intatto il foglio di sintesi originale
-        with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
-            df_raccolta_aggiornato.to_excel(writer, sheet_name='Raccolta Dati', index=False)
-            df_sintesi.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
+        # Utilizziamo openpyxl per agganciare il file esistente e modificare SOLO il foglio "Raccolta Dati"
+        # In questo modo il foglio "Analisi e Sintesi" non viene minimamente toccato né corrotto
+        book = openpyxl.load_workbook(excel_file)
+        writer = pd.ExcelWriter(excel_file, engine='openpyxl')
+        writer.book = book
+        
+        # Rimuoviamo temporaneamente il foglio vecchio dei dati e lo sostituiamo con quello aggiornato
+        if 'Raccolta Dati' in writer.book.sheetnames:
+            idx = writer.book.sheetnames.index('Raccolta Dati')
+            writer.book.remove(writer.book.worksheets[idx])
+            
+        df_raccolta_aggiornato.to_excel(writer, sheet_name='Raccolta Dati', index=False)
+        writer.save()
 
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
@@ -163,7 +170,7 @@ if st.session_state.step == 0:
         if os.path.exists(excel_path):
             with open(excel_path, "rb") as f:
                 st.download_button(
-                    label="📥 Scarica Excel Aggiornato (Raccolta Dati e Sintesi)",
+                    label="📥 Scarica Excel Aggiornato (Raccolta Dati + Dashboard Intatta)",
                     data=f,
                     file_name="Strumento_Analisi_Questionario_Cure_Palliative.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
