@@ -62,73 +62,61 @@ def render_likert_question(question_text, key_name):
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
 
-# Funzione per registrare la risposta nel file Excel con la data e l'ora
+# Funzione corretta per registrare la risposta preservando la Dashboard di Analisi e Sintesi
 def registra_risposta_su_excel():
     excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
     
-    if not os.path.exists(excel_file):
-        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
-            df_init = pd.DataFrame(columns=[
-                "Data_Ora", "ID Risposta", "Profilo Professionale", 
-                "A1_Q1 (Significato Lavoro)", "A1_Q2 (Riconoscimento)", 
-                "A2_Q3 (Supporto Équipe)", "A2_Q4 (Carichi Sostenibili)", "A2_Q5 (Debriefing)", "A2_Q6 (Parità di Genere)", "A2_Q7 (Inclusione/Orientamento)", 
-                "A3_Q8 (Esaurimento Emotivo)*", "A3_Q9 (Peso Emotivo)*", "A3_Q10 (Strategie Coping)", 
-                "A4_Q11 (Supporto Etico)", "A4_Q12 (Linee Guida)", 
-                "A5_Q13 (Formazione)", "A5_Q14 (Prospettive Future)", 
-                "Media Area 1", "Media Area 2", "Media Area 3 (Invertita)", "Media Area 4", "Media Area 5", "Indice Benessere Globale"
-            ])
-            df_init.to_excel(writer, sheet_name='Raccolta Dati', index=False)
-            df_sintesi = pd.DataFrame({"Dashboard": ["Sintesi Risultati Rete Cure Palliative"]})
-            df_sintesi.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
-
-    df_esistente = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
-    num_id = len(df_esistente) + 1
-    id_risposta_str = f"ID_{num_id:03d}"
-    data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-
+    # 1. Calcolo delle medie della compilazione corrente
     m_area1 = np.mean([st.session_state.q1_1, st.session_state.q1_2])
     m_area2 = np.mean([st.session_state.q2_1, st.session_state.q2_2, st.session_state.q2_3, st.session_state.q2_4, st.session_state.q2_5])
     m_area3 = np.mean([6 - st.session_state.q3_1, 6 - st.session_state.q3_2, 6 - st.session_state.q3_3])
     m_area4 = np.mean([st.session_state.q4_1, st.session_state.q4_2])
     m_area5 = np.mean([st.session_state.q5_1, st.session_state.q5_2])
     indice_globale = np.mean([m_area1, m_area2, m_area3, m_area4, m_area5])
+    
+    data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    nuova_riga = {
-        "Data_Ora": data_compilazione,
-        "ID Risposta": id_risposta_str,
-        "Profilo Professionale": "Anonimo",
-        "A1_Q1 (Significato Lavoro)": st.session_state.q1_1,
-        "A1_Q2 (Riconoscimento)": st.session_state.q1_2,
-        "A2_Q3 (Supporto Équipe)": st.session_state.q2_1,
-        "A2_Q4 (Carichi Sostenibili)": st.session_state.q2_2,
-        "A2_Q5 (Debriefing)": st.session_state.q2_3,
-        "A2_Q6 (Parità di Genere)": st.session_state.q2_4,
-        "A2_Q7 (Inclusione/Orientamento)": st.session_state.q2_5,
-        "A3_Q8 (Esaurimento Emotivo)*": st.session_state.q3_1,
-        "A3_Q9 (Peso Emotivo)*": st.session_state.q3_2,
-        "A3_Q10 (Strategie Coping)": st.session_state.q3_3,
-        "A4_Q11 (Supporto Etico)": st.session_state.q4_1,
-        "A4_Q12 (Linee Guida)": st.session_state.q4_2,
-        "A5_Q13 (Formazione)": st.session_state.q5_1,
-        "A5_Q14 (Prospettive Future)": st.session_state.q5_2,
-        "Media Area 1": round(m_area1, 2),
-        "Media Area 2": round(m_area2, 2),
-        "Media Area 3 (Invertita)": round(m_area3, 2),
-        "Media Area 4": round(m_area4, 2),
-        "Media Area 5": round(m_area5, 2),
-        "Indice Benessere Globale": round(indice_globale, 2)
-    }
-
-    df_nuovo = pd.DataFrame([nuova_riga])
-    df_aggiornato = pd.concat([df_esistente, df_nuovo], ignore_index=True)
-
-    with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
-        df_aggiornato.to_excel(writer, sheet_name='Raccolta Dati', index=False)
-        try:
-            df_sintesi_old = pd.read_excel(excel_file, sheet_name='Analisi e Sintesi')
-        except:
-            df_sintesi_old = pd.DataFrame(columns=["Dashboard"])
-        df_sintesi_old.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
+    if os.path.exists(excel_file):
+        # Leggiamo il file esistente preservando ENTRAMBI i fogli
+        df_raccolta = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
+        df_sintesi = pd.read_excel(excel_file, sheet_name='Analisi e Sintesi')
+        
+        num_id = len(df_raccolta) + 1
+        id_risposta_str = f"ID_{num_id:03d}"
+        
+        nuova_riga = {
+            "Data_Ora": data_compilazione,
+            "ID Risposta": id_risposta_str,
+            "Profilo Professionale": "Anonimo",
+            "A1_Q1 (Significato Lavoro)": st.session_state.q1_1,
+            "A1_Q2 (Riconoscimento)": st.session_state.q1_2,
+            "A2_Q3 (Supporto Équipe)": st.session_state.q2_1,
+            "A2_Q4 (Carichi Sostenibili)": st.session_state.q2_2,
+            "A2_Q5 (Debriefing)": st.session_state.q2_3,
+            "A2_Q6 (Parità di Genere)": st.session_state.q2_4,
+            "A2_Q7 (Inclusione/Orientamento)": st.session_state.q2_5,
+            "A3_Q8 (Esaurimento Emotivo)*": st.session_state.q3_1,
+            "A3_Q9 (Peso Emotivo)*": st.session_state.q3_2,
+            "A3_Q10 (Strategie Coping)": st.session_state.q3_3,
+            "A4_Q11 (Supporto Etico)": st.session_state.q4_1,
+            "A4_Q12 (Linee Guida)": st.session_state.q4_2,
+            "A5_Q13 (Formazione)": st.session_state.q5_1,
+            "A5_Q14 (Prospettive Future)": st.session_state.q5_2,
+            "Media Area 1": round(m_area1, 2),
+            "Media Area 2": round(m_area2, 2),
+            "Media Area 3 (Invertita)": round(m_area3, 2),
+            "Media Area 4": round(m_area4, 2),
+            "Media Area 5": round(m_area5, 2),
+            "Indice Benessere Globale": round(indice_globale, 2)
+        }
+        
+        df_nuovo = pd.DataFrame([nuova_riga])
+        df_raccolta_aggiornato = pd.concat([df_raccolta, df_nuovo], ignore_index=True)
+        
+        # Riscriviamo il file Excel mantenendo rigorosamente intatto il foglio di sintesi originale
+        with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
+            df_raccolta_aggiornato.to_excel(writer, sheet_name='Raccolta Dati', index=False)
+            df_sintesi.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
 
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
@@ -158,10 +146,9 @@ if st.session_state.step == 0:
 
     st.markdown("<br><hr>", unsafe_allow_html=True)
     
-    # --- ACCESSO RISERVATO REFERENTI (Pulsante fantasma / Credenziali) ---
+    # --- ACCESSO RISERVATO REFERENTI (Pulsante protetto da password) ---
     with st.expander("🔒 Accesso Riservato Referenti Qualità"):
         password_inserita = st.text_input("Inserisci la password amministratore:", type="password")
-        # Puoi cambiare la password qui sotto (es. "palliative2026")
         if st.button("Sblocca Area Report"):
             if password_inserita == "palliative2026":
                 st.session_state.admin_logged = True
@@ -176,7 +163,7 @@ if st.session_state.step == 0:
         if os.path.exists(excel_path):
             with open(excel_path, "rb") as f:
                 st.download_button(
-                    label="📥 Scarica Excel Aggiornato (Raccolta Dati)",
+                    label="📥 Scarica Excel Aggiornato (Raccolta Dati e Sintesi)",
                     data=f,
                     file_name="Strumento_Analisi_Questionario_Cure_Palliative.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
