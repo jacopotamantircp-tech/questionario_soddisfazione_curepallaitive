@@ -17,6 +17,8 @@ if 'step' not in st.session_state:
     st.session_state.step = 0
 if 'admin_logged' not in st.session_state:
     st.session_state.admin_logged = False
+if 'conferma_reset' not in st.session_state:
+    st.session_state.conferma_reset = False
 
 # Testi esatti richiesti
 titolo_principale = "QUESTIONARIO DI MONITORAGGIO DEL BENESSERE E CLIMA ORGANIZZATIVO IN CURE PALLIATIVE"
@@ -62,11 +64,11 @@ def render_likert_question(question_text, key_name):
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
 
-# Funzione per registrare la risposta con openpyxl preservando la Dashboard di Analisi e Sintesi
+# Funzione per registrare la risposta a partire dalla riga 2
 def registra_risposta_su_excel():
     excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
     
-    # 1. Calcolo delle medie della compilazione corrente
+    # Calcolo delle medie della compilazione corrente
     m_area1 = np.mean([st.session_state.q1_1, st.session_state.q1_2])
     m_area2 = np.mean([st.session_state.q2_1, st.session_state.q2_2, st.session_state.q2_3, st.session_state.q2_4, st.session_state.q2_5])
     m_area3 = np.mean([6 - st.session_state.q3_1, 6 - st.session_state.q3_2, 6 - st.session_state.q3_3])
@@ -81,8 +83,16 @@ def registra_risposta_su_excel():
         
         if 'Raccolta Dati' in wb.sheetnames:
             ws = wb['Raccolta Dati']
-            next_row = ws.max_row + 1
-            id_risposta_str = f"ID_{next_row - 1:03d}"
+            
+            # Calcoliamo l'ID progressivo reale basato sulle righe esistenti a partire dalla riga 2
+            # Se la riga 2 è vuota, partiamo da ID_001
+            current_rows = ws.max_row
+            if current_rows == 1 and ws.cell(row=1, column=1).value is None:
+                next_id_num = 1
+            else:
+                next_id_num = current_rows
+                
+            id_risposta_str = f"ID_{next_id_num:03d}"
             
             nuova_riga = [
                 data_compilazione,
@@ -111,6 +121,18 @@ def registra_risposta_su_excel():
             ]
             
             ws.append(nuova_riga)
+            wb.save(excel_file)
+
+# Funzione per resettare il foglio Raccolta Dati mantenendo solo l'intestazione
+def reset_raccolta_dati():
+    excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
+    if os.path.exists(excel_file):
+        wb = openpyxl.load_workbook(excel_file)
+        if 'Raccolta Dati' in wb.sheetnames:
+            ws = wb['Raccolta Dati']
+            # Manteniamo la riga 1 (intestazioni) e cancelliamo tutte le righe successive dalla 2 in poi
+            if ws.max_row > 1:
+                ws.delete_rows(2, ws.max_row)
             wb.save(excel_file)
 
 # SCHERMATA 0: Presentazione e istruzioni
@@ -163,6 +185,18 @@ if st.session_state.step == 0:
                     file_name="Strumento_Analisi_Questionario_Cure_Palliative.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("#### ⚠️ Area di Reset Dati")
+            conferma_checkbox = st.checkbox("Confermo di voler eliminare tutte le risposte registrate finora nel foglio 'Raccolta Dati'")
+            
+            if st.button("🗑️ Resetta / Pulisci Dati Raccolti", type="secondary"):
+                if conferma_checkbox:
+                    reset_raccolta_dati()
+                    st.success("Il foglio 'Raccolta Dati' è stato pulito con successo (intestazioni preservate).")
+                    st.rerun()
+                else:
+                    st.warning("Per favore, spunta la casella di conferma prima di procedere al reset.")
         else:
             st.info("Nessun dato registrato al momento.")
 
