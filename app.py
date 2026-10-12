@@ -62,7 +62,7 @@ def render_likert_question(question_text, key_name):
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
 
-# Funzione chirurgica: aggiorna ESCLUSIVAMENTE il foglio "Raccolta Dati" lasciando intatta la dashboard grafica
+# Funzione per registrare la risposta con openpyxl preservando la Dashboard di Analisi e Sintesi
 def registra_risposta_su_excel():
     excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
     
@@ -77,53 +77,41 @@ def registra_risposta_su_excel():
     data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if os.path.exists(excel_file):
-        # Leggiamo solo il foglio dei dati grezzi
-        df_raccolta = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
-        num_id = len(df_raccolta) + 1
-        id_risposta_str = f"ID_{num_id:03d}"
+        wb = openpyxl.load_workbook(excel_file)
         
-        nuova_riga = {
-            "Data_Ora": data_compilazione,
-            "ID Risposta": id_risposta_str,
-            "Profilo Professionale": "Anonimo",
-            "A1_Q1 (Significato Lavoro)": st.session_state.q1_1,
-            "A1_Q2 (Riconoscimento)": st.session_state.q1_2,
-            "A2_Q3 (Supporto Équipe)": st.session_state.q2_1,
-            "A2_Q4 (Carichi Sostenibili)": st.session_state.q2_2,
-            "A2_Q5 (Debriefing)": st.session_state.q2_3,
-            "A2_Q6 (Parità di Genere)": st.session_state.q2_4,
-            "A2_Q7 (Inclusione/Orientamento)": st.session_state.q2_5,
-            "A3_Q8 (Esaurimento Emotivo)*": st.session_state.q3_1,
-            "A3_Q9 (Peso Emotivo)*": st.session_state.q3_2,
-            "A3_Q10 (Strategie Coping)": st.session_state.q3_3,
-            "A4_Q11 (Supporto Etico)": st.session_state.q4_1,
-            "A4_Q12 (Linee Guida)": st.session_state.q4_2,
-            "A5_Q13 (Formazione)": st.session_state.q5_1,
-            "A5_Q14 (Prospettive Future)": st.session_state.q5_2,
-            "Media Area 1": round(m_area1, 2),
-            "Media Area 2": round(m_area2, 2),
-            "Media Area 3 (Invertita)": round(m_area3, 2),
-            "Media Area 4": round(m_area4, 2),
-            "Media Area 5": round(m_area5, 2),
-            "Indice Benessere Globale": round(indice_globale, 2)
-        }
-        
-        df_nuovo = pd.DataFrame([nuova_riga])
-        df_raccolta_aggiornato = pd.concat([df_raccolta, df_nuovo], ignore_index=True)
-        
-        # Utilizziamo openpyxl per agganciare il file esistente e modificare SOLO il foglio "Raccolta Dati"
-        # In questo modo il foglio "Analisi e Sintesi" non viene minimamente toccato né corrotto
-        book = openpyxl.load_workbook(excel_file)
-        writer = pd.ExcelWriter(excel_file, engine='openpyxl')
-        writer.book = book
-        
-        # Rimuoviamo temporaneamente il foglio vecchio dei dati e lo sostituiamo con quello aggiornato
-        if 'Raccolta Dati' in writer.book.sheetnames:
-            idx = writer.book.sheetnames.index('Raccolta Dati')
-            writer.book.remove(writer.book.worksheets[idx])
+        if 'Raccolta Dati' in wb.sheetnames:
+            ws = wb['Raccolta Dati']
+            next_row = ws.max_row + 1
+            id_risposta_str = f"ID_{next_row - 1:03d}"
             
-        df_raccolta_aggiornato.to_excel(writer, sheet_name='Raccolta Dati', index=False)
-        writer.save()
+            nuova_riga = [
+                data_compilazione,
+                id_risposta_str,
+                "Anonimo",
+                st.session_state.q1_1,
+                st.session_state.q1_2,
+                st.session_state.q2_1,
+                st.session_state.q2_2,
+                st.session_state.q2_3,
+                st.session_state.q2_4,
+                st.session_state.q2_5,
+                st.session_state.q3_1,
+                st.session_state.q3_2,
+                st.session_state.q3_3,
+                st.session_state.q4_1,
+                st.session_state.q4_2,
+                st.session_state.q5_1,
+                st.session_state.q5_2,
+                round(m_area1, 2),
+                round(m_area2, 2),
+                round(m_area3, 2),
+                round(m_area4, 2),
+                round(m_area5, 2),
+                round(indice_globale, 2)
+            ]
+            
+            ws.append(nuova_riga)
+            wb.save(excel_file)
 
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
