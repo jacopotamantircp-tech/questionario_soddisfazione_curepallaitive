@@ -12,9 +12,11 @@ st.set_page_config(
     layout="centered"
 )
 
-# Inizializzazione dello stato della sessione per la navigazione a schermate
+# Inizializzazione dello stato della sessione per la navigazione e la password
 if 'step' not in st.session_state:
     st.session_state.step = 0
+if 'admin_logged' not in st.session_state:
+    st.session_state.admin_logged = False
 
 # Testi esatti richiesti
 titolo_principale = "QUESTIONARIO DI MONITORAGGIO DEL BENESSERE E CLIMA ORGANIZZATIVO IN CURE PALLIATIVE"
@@ -60,34 +62,41 @@ def render_likert_question(question_text, key_name):
     st.markdown("<br>", unsafe_allow_html=True)
     return st.session_state[key_name]
 
-# Funzione per registrare i dati direttamente nel file Excel ufficiale di analisi
+# Funzione per registrare la risposta nel file Excel con la data e l'ora
 def registra_risposta_su_excel():
     excel_file = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
     
-    # Calcolo delle medie per area rispettando la struttura del file Excel
+    if not os.path.exists(excel_file):
+        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+            df_init = pd.DataFrame(columns=[
+                "Data_Ora", "ID Risposta", "Profilo Professionale", 
+                "A1_Q1 (Significato Lavoro)", "A1_Q2 (Riconoscimento)", 
+                "A2_Q3 (Supporto Équipe)", "A2_Q4 (Carichi Sostenibili)", "A2_Q5 (Debriefing)", "A2_Q6 (Parità di Genere)", "A2_Q7 (Inclusione/Orientamento)", 
+                "A3_Q8 (Esaurimento Emotivo)*", "A3_Q9 (Peso Emotivo)*", "A3_Q10 (Strategie Coping)", 
+                "A4_Q11 (Supporto Etico)", "A4_Q12 (Linee Guida)", 
+                "A5_Q13 (Formazione)", "A5_Q14 (Prospettive Future)", 
+                "Media Area 1", "Media Area 2", "Media Area 3 (Invertita)", "Media Area 4", "Media Area 5", "Indice Benessere Globale"
+            ])
+            df_init.to_excel(writer, sheet_name='Raccolta Dati', index=False)
+            df_sintesi = pd.DataFrame({"Dashboard": ["Sintesi Risultati Rete Cure Palliative"]})
+            df_sintesi.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
+
+    df_esistente = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
+    num_id = len(df_esistente) + 1
+    id_risposta_str = f"ID_{num_id:03d}"
+    data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+
     m_area1 = np.mean([st.session_state.q1_1, st.session_state.q1_2])
     m_area2 = np.mean([st.session_state.q2_1, st.session_state.q2_2, st.session_state.q2_3, st.session_state.q2_4, st.session_state.q2_5])
-    # Area 3 Distress (invertita: 6 - valore)
     m_area3 = np.mean([6 - st.session_state.q3_1, 6 - st.session_state.q3_2, 6 - st.session_state.q3_3])
     m_area4 = np.mean([st.session_state.q4_1, st.session_state.q4_2])
     m_area5 = np.mean([st.session_state.q5_1, st.session_state.q5_2])
-    
     indice_globale = np.mean([m_area1, m_area2, m_area3, m_area4, m_area5])
-    
-    # Leggiamo il file Excel esistente per determinare il progressivo dell'ID Risposta
-    if os.path.exists(excel_file):
-        df_esistente = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
-        num_id = len(df_esistente) + 1
-    else:
-        num_id = 1
-        
-    id_risposta_str = f"ID_{num_id:03d}"
-    data_compilazione = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     nuova_riga = {
         "Data_Ora": data_compilazione,
         "ID Risposta": id_risposta_str,
-        "Profilo Professionale": "Anonimo", # Senza dati anagrafici per tutelare la privacy
+        "Profilo Professionale": "Anonimo",
         "A1_Q1 (Significato Lavoro)": st.session_state.q1_1,
         "A1_Q2 (Riconoscimento)": st.session_state.q1_2,
         "A2_Q3 (Supporto Équipe)": st.session_state.q2_1,
@@ -109,28 +118,17 @@ def registra_risposta_su_excel():
         "Media Area 5": round(m_area5, 2),
         "Indice Benessere Globale": round(indice_globale, 2)
     }
-    
+
     df_nuovo = pd.DataFrame([nuova_riga])
-    
-    if os.path.exists(excel_file):
-        # Utilizziamo pandas ExcelWriter per aggiornare il foglio 'Raccolta Dati' mantenendo 'Analisi e Sintesi'
-        with pd.ExcelWriter(excel_file, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-            # Leggiamo tutto il foglio esistente per appendere la riga in fondo
-            df_full = pd.read_excel(excel_file, sheet_name='Raccolta Dati')
-            df_updated = pd.concat([df_full, df_nuovo], ignore_index=True)
-            df_updated.to_excel(writer, sheet_name='Raccolta Dati', index=False)
-    else:
-        # Se per qualche motivo il file non è presente, lo creiamo da zero con i due fogli
-        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
-            df_nuovo.to_excel(writer, sheet_name='Raccolta Dati', index=False)
-            df_sintesi = pd.DataFrame({
-                "DASHBOARD DI MONITORAGGIO - SINTESI RISULTATI": ["Unità Operativa Complessa Rete delle Cure Palliative"],
-                "Numero Item": [14],
-                "Media Totale": [round(indice_globale, 2)],
-                "Mediani / Note": ["Aggiornato in tempo reale"],
-                "Stato / Soglia": ["Ottimale"]
-            })
-            df_sintesi.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
+    df_aggiornato = pd.concat([df_esistente, df_nuovo], ignore_index=True)
+
+    with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
+        df_aggiornato.to_excel(writer, sheet_name='Raccolta Dati', index=False)
+        try:
+            df_sintesi_old = pd.read_excel(excel_file, sheet_name='Analisi e Sintesi')
+        except:
+            df_sintesi_old = pd.DataFrame(columns=["Dashboard"])
+        df_sintesi_old.to_excel(writer, sheet_name='Analisi e Sintesi', index=False)
 
 # SCHERMATA 0: Presentazione e istruzioni
 if st.session_state.step == 0:
@@ -157,6 +155,34 @@ if st.session_state.step == 0:
     if st.button("Inizia il Questionario ➔", type="primary", use_container_width=True):
         st.session_state.step = 1
         st.rerun()
+
+    st.markdown("<br><hr>", unsafe_allow_html=True)
+    
+    # --- ACCESSO RISERVATO REFERENTI (Pulsante fantasma / Credenziali) ---
+    with st.expander("🔒 Accesso Riservato Referenti Qualità"):
+        password_inserita = st.text_input("Inserisci la password amministratore:", type="password")
+        # Puoi cambiare la password qui sotto (es. "palliative2026")
+        if st.button("Sblocca Area Report"):
+            if password_inserita == "palliative2026":
+                st.session_state.admin_logged = True
+                st.success("Accesso autorizzato!")
+                st.rerun()
+            else:
+                st.error("Password errata.")
+                
+    if st.session_state.admin_logged:
+        st.markdown("### 📊 Pannello di Gestione Dati")
+        excel_path = "Strumento_Analisi_Questionario_Cure_Palliative.xlsx"
+        if os.path.exists(excel_path):
+            with open(excel_path, "rb") as f:
+                st.download_button(
+                    label="📥 Scarica Excel Aggiornato (Raccolta Dati)",
+                    data=f,
+                    file_name="Strumento_Analisi_Questionario_Cure_Palliative.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+        else:
+            st.info("Nessun dato registrato al momento.")
 
 # SCHERMATA 1: Area 1
 elif st.session_state.step == 1:
@@ -297,7 +323,6 @@ elif st.session_state.step == 5:
             if None in vals_5:
                 st.warning("Per favore, rispondi a tutte le domande prima di procedere.")
             else:
-                # Salvataggio automatico sul file Excel ufficiale
                 registra_risposta_su_excel()
                 st.session_state.step = 6
                 st.rerun()
